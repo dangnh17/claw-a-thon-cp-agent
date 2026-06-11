@@ -58,12 +58,36 @@ python3 main.py
 
 The agent starts on `http://127.0.0.1:8080`.
 
+Open the UI in your browser:
+
+```text
+http://127.0.0.1:8080/
+```
+
+The UI is served by the same backend process and calls `/summary` on the same origin.
+
+There is also a standalone UI repo at `../http-page-summary-ui` if you want to develop or deploy the UI separately later.
+
+If a separately deployed UI calls this backend from another origin, set the backend CORS allowlist:
+
+```bash
+UI_ALLOWED_ORIGINS=http://127.0.0.1:5173,https://your-ui-domain.example python3 main.py
+```
+
 Test it:
 
 ```bash
 curl -X POST http://127.0.0.1:8080/invocations \
   -H "Content-Type: application/json" \
   -d '{"message": "Hello, agent!"}'
+```
+
+Summarize a page through the API:
+
+```bash
+curl -X POST http://127.0.0.1:8080/summary \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://example.com"}'
 ```
 
 Health check:
@@ -82,7 +106,8 @@ Use `/agentbase-identity` to register an agent identity or store API keys secure
 
 ## Project Structure
 
-- `main.py` - Agent entrypoint with handler and health check
+- `main.py` - Agent entrypoint, summary API, and health check
+- `ui/` - Static UI files served by the backend on the same port
 - `Dockerfile` - Container image definition
 - `requirements.txt` - Python dependencies
 - `.greennode.json` - AgentBase configuration

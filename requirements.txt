@@ -1,4 +1,5 @@
 greennode-agentbase
+httpx
 # Note: langchain v1.1.x removed create_agent from agents module.
 # Pin >=1.2.0 where it was restored.
 langchain>=1.2.0,<2.0.0
