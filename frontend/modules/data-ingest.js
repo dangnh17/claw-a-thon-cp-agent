@@ -182,7 +182,10 @@ export default {
               <td>${d.row_count}</td>
               <td>${_fmtBytes(d.size_bytes)}</td>
               <td>${Object.keys(d.columns || {}).join(", ")}</td>
-              <td><button class="preview-btn" data-name="${d.name}" style="margin:0;padding:3px 10px;font-size:12px">Preview</button></td>
+              <td style="display:flex;gap:4px">
+                <button class="preview-btn" data-name="${d.name}" style="margin:0;padding:3px 10px;font-size:12px">Preview</button>
+                <button class="delete-btn" data-name="${d.name}" style="margin:0;padding:3px 10px;font-size:12px;background:#e74c3c;color:#fff;border:none;border-radius:4px;cursor:pointer">🗑 Delete</button>
+              </td>
             </tr>
           `).join("")}
         </tbody>
@@ -192,6 +195,32 @@ export default {
     el.querySelectorAll(".preview-btn").forEach(btn => {
       btn.onclick = () => this._preview(container, btn.dataset.name);
     });
+
+    el.querySelectorAll(".delete-btn").forEach(btn => {
+      btn.onclick = () => this._delete(container, btn.dataset.name);
+    });
+  },
+
+  // ── Delete ──────────────────────────────────────────────────────────────────
+  async _delete(container, name) {
+    if (!confirm(`Delete dataset "${name}"? This cannot be undone.`)) return;
+
+    try {
+      const resp = await fetch(`${API}/dataset?dataset=${encodeURIComponent(name)}`, { method: "DELETE" });
+      const data = await resp.json();
+      if (resp.ok) {
+        this._loadDatasets(container);
+        // Hide preview panel if it was showing the deleted dataset
+        const previewName = container.querySelector("#d-preview-name");
+        if (previewName && previewName.textContent === name) {
+          container.querySelector("#d-preview-section").style.display = "none";
+        }
+      } else {
+        alert(`✗ ${data.detail}`);
+      }
+    } catch (err) {
+      alert(`✗ Network error: ${err.message}`);
+    }
   },
 
   // ── Preview ─────────────────────────────────────────────────────────────────

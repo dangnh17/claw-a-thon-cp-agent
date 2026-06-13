@@ -135,6 +135,23 @@ async def ingest_json(req: IngestRequest):
     }
 
 
+@router.delete("/dataset")
+async def delete_dataset(dataset: str):
+    """
+    Delete a dataset (removes the .parquet file and its directory if empty).
+
+    dataset = relative path under output/, e.g. "feature_a/records.parquet"
+    """
+    path = _resolve(dataset)
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail=f"Dataset not found: {dataset}")
+    os.remove(path)
+    parent = os.path.dirname(path)
+    if os.path.isdir(parent) and not os.listdir(parent):
+        os.rmdir(parent)
+    return {"ok": True, "deleted": dataset}
+
+
 @router.post("/upload")
 async def upload_parquet(
     file: UploadFile = File(...),

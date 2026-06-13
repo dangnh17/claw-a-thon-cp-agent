@@ -9,8 +9,8 @@ header h1 { margin: 0; font-size: 1.25rem; }
 .tab-btn.active { background: #fff; border-bottom: 1px solid #fff; margin-bottom: -1px; font-weight: 600; }
 
 /* ── Panels ── */
-#tab-panels { padding: 24px; }
-.tab-panel { display: none; max-width: 860px; }
+#tab-panels { padding: 24px; max-width: 860px; margin: 0 auto; }
+.tab-panel { display: none; max-width: 100%; }
 .tab-panel.active { display: block; }
 
 /* ── Shared UI primitives — all modules can use these ── */
