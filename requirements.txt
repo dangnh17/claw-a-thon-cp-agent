@@ -1,0 +1,9 @@
+fastapi>=0.111
+uvicorn[standard]>=0.29
+openai>=1.30
+python-multipart>=0.0.9
+python-dotenv>=1.0
+pydantic>=2.0
+pyarrow>=16.0
+pandas>=2.2
+greennode-agentbase
