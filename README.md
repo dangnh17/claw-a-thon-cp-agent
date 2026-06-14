@@ -33,9 +33,12 @@ LLM:  agent/llm_client.py  (OpenAI-compatible MaaS)
 │   ├── modules/
 │   │   ├── __init__.py         # ✏️ Add 1 line per feature
 │   │   ├── feature_a.py        # Template — copy to add feature
-│   │   └── data_ingest.py      # ⛔ Shared data API
+│   │   └── data_ingest.py      # Internal only — not mounted as public API
 │   └── data/
 │       └── store.py            # ⛔ Parquet helpers
+│
+├── scripts/
+│   └── insert_data.py          # Manual data insertion (CLI)
 │
 ├── frontend/
 │   ├── index.html              # ⛔ DO NOT EDIT
@@ -44,7 +47,7 @@ LLM:  agent/llm_client.py  (OpenAI-compatible MaaS)
 │   └── modules/
 │       ├── index.js            # ✏️ Add 1 line per feature
 │       ├── feature-a.js        # Template — copy to add feature
-│       └── data-ingest.js      # ⛔ Shared data UI
+│       └── data-ingest.js      # (not registered — internal only)
 │
 └── output/                     # Parquet files (gitignored)
 ```
@@ -115,15 +118,22 @@ append_record(DATA_PATH, {"score": 4.2, "label": "good"})
 rows = read_records(DATA_PATH)
 ```
 
-**HTTP API for agents:**
+**Manual insertion (CLI script):**
 
+```bash
+# Append records from a JSON file
+python scripts/insert_data.py --dataset feature_a/records --file /path/to/data.json
+
+# Append inline JSON
+python scripts/insert_data.py --dataset feature_a/records \
+    --records '[{"score": 4.2, "label": "good"}]'
+
+# Overwrite (replaces all existing data)
+python scripts/insert_data.py --dataset feature_a/records \
+    --mode overwrite --file /path/to/data.json
 ```
-GET  /api/data/datasets
-GET  /api/data/schema?dataset=feature_a/results.parquet
-GET  /api/data/preview?dataset=feature_a/results.parquet&limit=20
-POST /api/data/ingest   {"dataset": "...", "records": [...], "mode": "append"}
-POST /api/data/upload   (multipart .parquet file)
-```
+
+> `/api/data/*` endpoints are **not exposed publicly**. Data access is internal via `agent.data.store`.
 
 ---
 
@@ -154,7 +164,7 @@ pip install -r requirements.txt
 python run_agent.py
 ```
 
-Open `http://localhost:8080` — the **Data** tab lets you upload and inspect datasets.
+Open `http://localhost:8080` — tabs auto-appear for each registered feature.
 
 ---
 

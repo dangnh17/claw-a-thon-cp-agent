@@ -10,14 +10,15 @@ This document tells Claude (and any AI agent) exactly how this codebase works so
 Browser
   └── HTTP (port 8080)
         └── FastAPI  (agent/app.py)
-              ├── /api/data/*          ← shared data management
               ├── /api/feature-a/*     ← member 1
               ├── /api/feature-b/*     ← member 2
               └── /api/feature-c/*    ← member 3
 
-Data store: output/**/*.parquet       (Parquet via PyArrow)
+Data store: output/**/*.parquet       (Parquet via PyArrow — internal only)
 LLM:        agent/llm_client.py       (OpenAI-compatible MaaS)
 ```
+
+> `/api/data/*` is **not public**. Backend modules access data directly via `agent.data.store`. Manual insertion uses `scripts/insert_data.py`.
 
 **Two files are auto-registries** — team members add exactly one line each:
 - `agent/modules/__init__.py` — backend router registration
@@ -50,7 +51,6 @@ from agent.modules import feature_b   # add this line
 
 def get_all_routers():
     return [
-        data_ingest.router,
         feature_a.router,
         feature_b.router,   # add this line
     ]
@@ -72,7 +72,6 @@ Register in `frontend/modules/index.js` (add **2 lines**):
 import featureB from "./feature-b.js";   // add this line
 
 export default [
-  dataIngest,
   featureA,
   featureB,   // add this line
 ];
@@ -112,25 +111,21 @@ schema = get_schema(DATA_PATH)
 
 Each feature MUST use its own subdirectory: `output/feature_x/`.
 
-### HTTP API (agent skill — call from anywhere)
+### Manual insertion (CLI — for human operators)
 
-```
-GET  /api/data/datasets               → list all datasets
-GET  /api/data/schema?dataset=...     → schema for one dataset
-GET  /api/data/preview?dataset=...&limit=20
-POST /api/data/ingest                 → ingest JSON records
-POST /api/data/upload                 → upload .parquet file
-```
+`/api/data/*` is **not a public endpoint**. To insert data manually, use the CLI script:
 
-**Ingest example (agent calling HTTP):**
-```python
-import httpx
+```bash
+# Append from JSON file (safe — does not delete existing data)
+python scripts/insert_data.py --dataset feature_b/results --file /path/to/data.json
 
-httpx.post("http://localhost:8080/api/data/ingest", json={
-    "dataset": "feature_b/results",
-    "records": [{"score": 4.2, "label": "good"}],
-    "mode": "append"   # or "overwrite"
-})
+# Append inline
+python scripts/insert_data.py --dataset feature_b/results \
+    --records '[{"score": 4.2, "label": "good"}]'
+
+# Overwrite (replaces all existing data)
+python scripts/insert_data.py --dataset feature_b/results \
+    --mode overwrite --file /path/to/data.json
 ```
 
 ---
@@ -199,9 +194,12 @@ agent/
   modules/
     __init__.py       # Registry — add 1 line per feature
     feature_a.py      # Template — copy to add your feature
-    data_ingest.py    # Shared data API (DO NOT EDIT)
+    data_ingest.py    # Internal only — not mounted as public API
   data/
     store.py          # Parquet helpers (DO NOT EDIT)
+
+scripts/
+  insert_data.py      # Manual data insertion (CLI)
 
 frontend/
   index.html          # DO NOT EDIT
@@ -210,7 +208,7 @@ frontend/
   modules/
     index.js          # Registry — add 1 line per feature
     feature-a.js      # Template — copy to add your feature
-    data-ingest.js    # Shared data UI (DO NOT EDIT)
+    data-ingest.js    # (not registered — internal only)
 
 output/               # Parquet files — gitignored
   feature_a/

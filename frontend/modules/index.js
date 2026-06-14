@@ -7,13 +7,11 @@
 // Git conflict here = add your line back. That's it.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import dataIngest from "./data-ingest.js";   // shared data tool (always first)
 import featureA   from "./feature-a.js";     // member 1
 // import featureB from "./feature-b.js";    // member 2  ← uncomment when ready
 // import featureC from "./feature-c.js";    // member 3
 
 export default [
-  dataIngest,   // shared — always visible
   featureA,
   // featureB,
   // featureC,

@@ -8,7 +8,6 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 from agent.modules import feature_a    # member 1
-from agent.modules import data_ingest  # data management (shared)
 # from agent.modules import feature_b  # member 2  ← uncomment when ready
 # from agent.modules import feature_c  # member 3
 
@@ -18,7 +17,6 @@ from fastapi import APIRouter
 def get_all_routers() -> list[APIRouter]:
     """Return all feature routers. Imported by agent/app.py."""
     return [
-        data_ingest.router,  # always first — shared tool
         feature_a.router,
         # feature_b.router,
         # feature_c.router,
