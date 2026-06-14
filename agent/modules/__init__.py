@@ -8,6 +8,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 from agent.modules import feature_a    # member 1
+from agent.modules import debug_investigator # debug investigator
 # from agent.modules import feature_b  # member 2  ← uncomment when ready
 # from agent.modules import feature_c  # member 3
 
@@ -18,6 +19,7 @@ def get_all_routers() -> list[APIRouter]:
     """Return all feature routers. Imported by agent/app.py."""
     return [
         feature_a.router,
+        debug_investigator.router,
         # feature_b.router,
         # feature_c.router,
     ]

@@ -13,7 +13,6 @@ __pycache__/
 .git/
 .gitignore
 *.md
-output/
 docker/
 *.egg-info
 .DS_Store

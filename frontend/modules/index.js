@@ -8,11 +8,13 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import featureA   from "./feature-a.js";     // member 1
+import debugInvestigator from "./debug-investigator.js"; // debug investigator
 // import featureB from "./feature-b.js";    // member 2  ← uncomment when ready
 // import featureC from "./feature-c.js";    // member 3
 
 export default [
   featureA,
+  debugInvestigator,
   // featureB,
   // featureC,
 ];
