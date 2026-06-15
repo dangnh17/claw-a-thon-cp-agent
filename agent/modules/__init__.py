@@ -7,7 +7,8 @@
 # Git conflict in this file = add your line back. That's it.
 # ─────────────────────────────────────────────────────────────────────────────
 
-from agent.modules import feature_a    # member 1
+from agent.modules import feature_a        # member 1
+from agent.modules import funnel_analysis  # funnel analysis
 # from agent.modules import feature_b  # member 2  ← uncomment when ready
 # from agent.modules import feature_c  # member 3
 
@@ -18,6 +19,7 @@ def get_all_routers() -> list[APIRouter]:
     """Return all feature routers. Imported by agent/app.py."""
     return [
         feature_a.router,
+        funnel_analysis.router,
         # feature_b.router,
         # feature_c.router,
     ]
