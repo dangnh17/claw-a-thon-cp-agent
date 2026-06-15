@@ -9,12 +9,12 @@
 
 import featureA        from "./feature-a.js";         // member 1
 import funnelAnalysis  from "./funnel-analysis.js";    // funnel analysis
-// import featureB from "./feature-b.js";    // member 2  ← uncomment when ready
-// import featureC from "./feature-c.js";    // member 3
+import debugInvestigator from "./debug-investigator.js"; // debug investigator
 
 export default [
   featureA,
   funnelAnalysis,
+  debugInvestigator,
   // featureB,
   // featureC,
 ];

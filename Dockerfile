@@ -10,6 +10,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY agent/ ./agent/
 COPY frontend/ ./frontend/
 COPY run_agent.py ./
+COPY output/ ./output/
 
 # Parquet output lives here; mount a volume to persist across runs
 RUN mkdir -p output
