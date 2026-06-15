@@ -7,3 +7,5 @@ pydantic>=2.0
 pyarrow>=16.0
 pandas>=2.2
 greennode-agentbase
+polars>=1.41.2
+tqdm>=4.68.0

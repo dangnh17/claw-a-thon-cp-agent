@@ -644,7 +644,8 @@ def _build_insight(
     events_text = "\n".join(
         f"[{e.id}] [{e.timestamp}] [{e.source.upper()}] {e.title}"
         + (f" — {e.subtitle}" if e.subtitle else "")
-        + (f" | LỖI: {e.raw.get('error_message', '')}" if e.severity in ("error", "fatal") else "")
+        + (f" | META: {e.raw.get('metadata', '')}" if e.source == "tracking" and e.raw.get("metadata") else "")
+        + (f" | ERROR: {e.raw.get('error_message', '')}" if e.severity in ("error", "fatal") else "")
         for e in sample
     )
 
@@ -656,42 +657,42 @@ def _build_insight(
 
     mismatch_note = ""
     if time_mismatch:
-        direction = "TRƯỚC" if shift_days < 0 else "SAU"
+        direction = "before" if shift_days < 0 else "after"
         mismatch_note = (
-            f"\n⚠️ DỮ LIỆU ĐƯỢC TÌM THẤY {abs(shift_days)} NGÀY {direction} THỜI GIAN BÁO CÁO. "
-            f"Lưu ý sự khác biệt này.\n"
+            f"\n⚠️ DATA FOUND {abs(shift_days)} DAY(S) {direction.upper()} REPORTED INCIDENT TIME. "
+            f"Note this discrepancy in your analysis.\n"
         )
 
-    prompt = f"""Bạn là kỹ sư phân tích lỗi ZaloPay. Phân tích log bên dưới và trả về JSON insight.
-Chỉ được sử dụng thông tin từ log được cung cấp. Không được bịa thêm thông tin.
+    prompt = f"""You are a ZaloPay bug investigation engineer. Analyze the logs below and return a JSON insight.
+Use only information from the provided logs. Do not invent data.
+Write all text values in Vietnamese, except event IDs and timestamps.
 {mismatch_note}
 === TICKET ===
-{req.ticket_text[:500] if req.ticket_text else "(không có ticket)"}
+{req.ticket_text[:500] if req.ticket_text else "(none)"}
 
-=== THÔNG TIN USER ===
+=== USER INFO ===
 ZaloPayID: {req.zalopay_id}
-Thời gian sự cố (từ ticket): {req.incident_time or "không rõ"}
+Incident time (from ticket): {req.incident_time or "unknown"}
 
-=== SỰ KIỆN ({len(events)} tổng, hiển thị {len(sample)}) ===
+=== EVENTS ({len(events)} total, showing {len(sample)}) ===
 {events_text}
-{"... (đã rút gọn)" if len(events) > 80 else ""}
+{"... (truncated)" if len(events) > 80 else ""}
 
-=== LỖI API ({len(errors)}) ===
-{error_text or "Không có lỗi API"}
+=== API ERRORS ({len(errors)}) ===
+{error_text or "No API errors"}
 
-Trả về JSON thuần túy (không có markdown). Dùng event ID chính xác như trong danh sách trên (ví dụ "vital-0001").
-Tất cả text viết bằng tiếng Việt, ngoại trừ event ID và timestamp.
+Return plain JSON only (no markdown). Use exact event IDs as listed above (e.g. "vital-0001").
 
 {{
-  "summary": "tóm tắt tình trạng một câu",
-  "user_flow": "mô tả user đi qua những màn hình/bước nào dựa trên tracking events",
-  "likely_root_cause": "nguyên nhân gốc rễ có thể nhất. Nếu không đủ bằng chứng, viết chính xác: 'Insufficient evidence to determine root cause.'",
+  "summary": "one-sentence status summary (Vietnamese)",
+  "user_flow": "describe screens/steps the user went through based on tracking events (Vietnamese)",
+  "likely_root_cause": "most likely root cause. If insufficient evidence, write exactly: 'Insufficient evidence to determine root cause.'  (Vietnamese otherwise)",
   "confidence": "low|medium|high",
   "evidence": [
-    {{"event_id": "vital-0001", "timestamp": "...", "reason": "lý do event này là bằng chứng"}}
+    {{"event_id": "vital-0001", "timestamp": "...", "reason": "why this event is evidence (Vietnamese)"}}
   ],
-  "recommendations": ["hành động gợi ý 1", "hành động gợi ý 2"],
-  "unknowns": ["điều không thể xác định từ log hiện tại"]
+  "recommendations": ["suggested action 1 (Vietnamese)", "suggested action 2 (Vietnamese)"],
+  "unknowns": ["what cannot be determined from current logs (Vietnamese)"]
 }}"""
 
     try:
@@ -1031,6 +1032,10 @@ async def investigate(req: InvestigateRequest):
         status = "found"
 
     insight = _build_insight(all_events, req, time_mismatch, shift_days)
+
+    # Strip metadata from all events before sending to frontend (security)
+    for ev in all_events:
+        ev.raw.pop("metadata", None)
 
     return InvestigateResponse(
         status=status,

@@ -10,11 +10,10 @@
 import featureA        from "./feature-a.js";         // member 1
 import funnelAnalysis  from "./funnel-analysis.js";    // funnel analysis
 import debugInvestigator from "./debug-investigator.js"; // debug investigator
+import journeyInsight  from "./journey-insight.js";    // journey insight
 
 export default [
-  featureA,
   funnelAnalysis,
   debugInvestigator,
-  // featureB,
-  // featureC,
+  journeyInsight,
 ];

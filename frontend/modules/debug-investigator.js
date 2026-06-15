@@ -641,9 +641,6 @@ export default {
           html += this._dpField("Screen Name", m.screen_name);
       }
 
-      if (e.raw?.metadata)
-        html += this._dpField("Metadata", e.raw.metadata, true);
-
     } else if (e.source === "access") {
       html += this._dpField("Page", e.raw?.page || "–", true);
       if (e.raw?.app)     html += this._dpField("App", e.raw.app);
@@ -713,8 +710,6 @@ export default {
       const eventCode  = e.raw?.event_id || "–";
       const eventName  = e.mapping?.event_name || e.title || "";
       const showName   = eventName && eventName !== eventCode;
-      const metaRaw    = e.raw?.metadata || "";
-      const metaShort  = metaRaw.length > 60 ? metaRaw.slice(0, 60) + "…" : metaRaw;
       const isErr      = e.severity === "error" || e.severity === "fatal";
       const arrow      = pos < trackingEvts.length - 1 ? `<div class="di-journey-arrow">↓</div>` : "";
       return `
@@ -725,7 +720,6 @@ export default {
               <span class="di-journey-card-ts">${this._e(e.ts_str || "")}</span>
             </div>
             ${showName  ? `<div class="di-journey-card-name">${this._e(eventName)}</div>` : ""}
-            ${metaShort ? `<div class="di-journey-card-meta">${this._e(metaShort)}</div>` : ""}
             ${isErr     ? `<div class="di-journey-card-err">⚠ ERROR</div>` : ""}
           </div>
           ${arrow}
@@ -765,12 +759,13 @@ export default {
       </div>`;
     }
 
-    if (ins.likely_root_cause) {
-      html += `<div class="di-insight-section">
-        <h4>Likely Root Cause</h4>
-        <p>${this._e(ins.likely_root_cause)}</p>
-      </div>`;
-    }
+    // likely_root_cause: temporarily hidden from UI
+    // if (ins.likely_root_cause) {
+    //   html += `<div class="di-insight-section">
+    //     <h4>Likely Root Cause</h4>
+    //     <p>${this._e(ins.likely_root_cause)}</p>
+    //   </div>`;
+    // }
 
     // Evidence (clickable)
     if (ins.evidence && ins.evidence.length > 0) {
@@ -796,27 +791,28 @@ export default {
       </div>`;
     }
 
-    if (ins.unknowns && ins.unknowns.length > 0) {
-      const items = ins.unknowns.map(u => `<li>${this._e(u)}</li>`).join("");
-      html += `<div class="di-insight-section">
-        <h4>Unknowns</h4>
-        <ul class="di-insight-list">${items}</ul>
-      </div>`;
-    }
+    // unknowns: temporarily hidden
+    // if (ins.unknowns && ins.unknowns.length > 0) {
+    //   const items = ins.unknowns.map(u => `<li>${this._e(u)}</li>`).join("");
+    //   html += `<div class="di-insight-section">
+    //     <h4>Unknowns</h4>
+    //     <ul class="di-insight-list">${items}</ul>
+    //   </div>`;
+    // }
 
-    // Query summary
-    const qs = data.query_summary;
-    if (qs) {
-      html += `<div class="di-insight-section" style="margin-top:20px;padding-top:16px;border-top:1px solid #f1f5f9">
-        <h4>Query Summary</h4>
-        <p>
-          Attempts: ${qs.attempts_used} ·
-          Tables: ${(qs.tables_scanned || []).join(", ") || "–"} ·
-          Strategy: ${qs.strategy || "–"} ·
-          Correlation: ${(qs.correlation_basis || []).join(", ") || "–"}
-        </p>
-      </div>`;
-    }
+    // Query summary: temporarily hidden
+    // const qs = data.query_summary;
+    // if (qs) {
+    //   html += `<div class="di-insight-section" style="margin-top:20px;padding-top:16px;border-top:1px solid #f1f5f9">
+    //     <h4>Query Summary</h4>
+    //     <p>
+    //       Attempts: ${qs.attempts_used} ·
+    //       Tables: ${(qs.tables_scanned || []).join(", ") || "–"} ·
+    //       Strategy: ${qs.strategy || "–"} ·
+    //       Correlation: ${(qs.correlation_basis || []).join(", ") || "–"}
+    //     </p>
+    //   </div>`;
+    // }
 
     box.innerHTML = html;
 
@@ -850,7 +846,6 @@ export default {
     c.querySelector("#di-desc").value = "";
     const parsed = c.querySelector("#di-parsed");
     parsed.innerHTML = ""; parsed.style.display = "none";
-    this._setStatus(c, "");
     c.querySelector("#di-banners").innerHTML = "";
     c.querySelector("#di-result").style.display = "none";
     c.querySelector("#di-stats-ext").style.display = "none";
