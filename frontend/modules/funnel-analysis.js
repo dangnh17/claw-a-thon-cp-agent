@@ -10,7 +10,7 @@
  */
 
 const API = "/api/funnel-analysis";
-const STEP_COLORS = ["#4f8ef7", "#5da8f5", "#60b8ec", "#6cbfda", "#72c9c0", "#78d1a8", "#82d98e"];
+const STEP_COLORS = ["#C9B942", "#5B8A9A", "#2E8B57", "#E05555", "#00BCD4", "#9C5FB5", "#E08A2E"];
 
 export default {
   id: "funnel-analysis",
@@ -253,32 +253,45 @@ export default {
     const steps = data.funnel ?? [];
     if (!steps.length) { el.textContent = "No data."; return; }
 
-    const maxUsers = steps[0].users || 1;
+    // Grid tick marks: 0, 25, 50, 75, 100
+    const ticks = [0, 25, 50, 75, 100];
 
-    el.innerHTML = steps.map((s, i) => {
-      const barW  = Math.max(4, Math.round((s.users / maxUsers) * 100));
+    const rows = steps.map((s, i) => {
+      const pct   = Math.max(0.5, s.pct_of_baseline);   // never fully invisible
       const color = STEP_COLORS[i % STEP_COLORS.length];
       const drop  = (i > 0 && s.drop_from_prev > 0)
-        ? `<div class="fa-drop-line">▼ −${s.drop_from_prev.toLocaleString()} users &nbsp;(${s.drop_pct_formatted} drop)</div>`
-        : "";
+        ? `<div class="fa-drop-tag">▼ −${s.drop_from_prev.toLocaleString()} (${s.drop_pct_formatted})</div>`
+        : `<div class="fa-drop-tag"></div>`;
 
       return `
-        ${drop}
-        <div class="fa-result-step">
-          <div class="fa-result-label">
-            <span class="fa-result-num" style="color:${color}">Step ${s.step}</span>
-            <span class="fa-result-name">${_esc(s.name)}</span>
+        <div class="fa-chart-row">
+          <div class="fa-chart-label" title="${_esc(s.name)}">
+            ${drop}
+            <span class="fa-chart-step-name">${_esc(s.name)}</span>
+            <span class="fa-chart-users">${s.users.toLocaleString()} users</span>
           </div>
-          <div class="fa-bar-row">
-            <div class="fa-bar" style="width:${barW}%;background:${color}"></div>
-            <div class="fa-bar-meta">
-              <span class="fa-bar-users">${s.users.toLocaleString()}</span>
-              <span class="fa-bar-pct">${s.pct_formatted}</span>
+          <div class="fa-chart-track">
+            <div class="fa-chart-bar" style="width:${pct}%;background:${color}">
+              <span class="fa-chart-pct-label">${s.pct_formatted}</span>
             </div>
           </div>
         </div>
       `;
     }).join("");
+
+    const gridLines = ticks.map(t =>
+      `<div class="fa-grid-line" style="left:${t}%">
+        <span class="fa-grid-tick">${t}</span>
+       </div>`
+    ).join("");
+
+    el.innerHTML = `
+      <div class="fa-chart-wrap">
+        <div class="fa-chart-grid">${gridLines}</div>
+        <div class="fa-chart-rows">${rows}</div>
+        <div class="fa-chart-axis-label">Conv. % +</div>
+      </div>
+    `;
   },
 
   // ── Event browser ──────────────────────────────────────────────────────────
@@ -425,19 +438,82 @@ export default {
       .fa-event-name { flex: 1; color: #555; font-size: .78rem;
                        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-      /* ── Funnel result bars ── */
-      .fa-result-step   { margin-bottom: .4rem; }
-      .fa-drop-line     { font-size: .78rem; color: #e05c5c;
-                          padding: .12rem 0 .12rem .5rem;
-                          border-left: 2px solid #e05c5c44; margin-bottom: .2rem; }
-      .fa-result-label  { display: flex; gap: .5rem; align-items: baseline; margin-bottom: .15rem; }
-      .fa-result-num    { font-size: .75rem; font-weight: 700; min-width: 3.2rem; }
-      .fa-result-name   { font-size: .9rem; font-weight: 600; }
-      .fa-bar-row       { display: flex; align-items: center; gap: .65rem; }
-      .fa-bar           { height: 26px; border-radius: 4px; min-width: 4px; transition: width .35s ease; }
-      .fa-bar-meta      { display: flex; flex-direction: column; line-height: 1.2; }
-      .fa-bar-users     { font-size: .78rem; color: #888; }
-      .fa-bar-pct       { font-size: 1rem; font-weight: 700; }
+      /* ── Chart wrapper ── */
+      .fa-chart-wrap {
+        background: #f5f3ec;
+        border-radius: 8px;
+        padding: 1rem 1rem .5rem 1rem;
+        position: relative;
+        overflow: hidden;
+      }
+
+      /* Grid lines */
+      .fa-chart-grid {
+        position: absolute;
+        inset: 0 1rem 2rem calc(1rem + 160px); /* align with track area */
+        pointer-events: none;
+      }
+      .fa-grid-line {
+        position: absolute; top: 0; bottom: 0;
+        border-left: 1px solid #ddd9cc;
+      }
+      .fa-grid-tick {
+        position: absolute; bottom: -1.2rem;
+        transform: translateX(-50%);
+        font-size: .72rem; color: #999;
+      }
+
+      /* Rows */
+      .fa-chart-rows { position: relative; }
+      .fa-chart-row  {
+        display: flex; align-items: center;
+        gap: .75rem; margin-bottom: .55rem;
+      }
+
+      /* Left label column */
+      .fa-chart-label {
+        min-width: 160px; max-width: 160px;
+        display: flex; flex-direction: column;
+        align-items: flex-end; gap: .05rem;
+      }
+      .fa-drop-tag {
+        font-size: .7rem; color: #e05555; font-weight: 600;
+        min-height: .9rem; line-height: 1;
+      }
+      .fa-chart-step-name {
+        font-size: .82rem; font-weight: 700; color: #2c2c2c;
+        text-align: right; line-height: 1.2;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        max-width: 160px;
+      }
+      .fa-chart-users {
+        font-size: .7rem; color: #888; text-align: right;
+      }
+
+      /* Bar track */
+      .fa-chart-track {
+        flex: 1; height: 38px;
+        display: flex; align-items: center;
+      }
+      .fa-chart-bar {
+        height: 100%;
+        border-radius: 3px;
+        display: flex; align-items: center; justify-content: flex-end;
+        min-width: 30px;
+        transition: width .5s cubic-bezier(.4,0,.2,1);
+        position: relative;
+      }
+      .fa-chart-pct-label {
+        font-size: .82rem; font-weight: 700; color: #fff;
+        padding-right: .5rem; white-space: nowrap;
+        text-shadow: 0 1px 2px rgba(0,0,0,.25);
+      }
+
+      /* Axis label */
+      .fa-chart-axis-label {
+        text-align: center; font-size: .75rem; color: #999;
+        margin-top: 1.6rem; letter-spacing: .03em;
+      }
 
       /* ── AI Insight — Markdown output ── */
       .fa-insight-loading {
