@@ -27,33 +27,48 @@ export default {
     container.innerHTML = `
       <h2>${this.icon} ${this.label}</h2>
 
-      <!-- ── Step editor ── -->
-      <section id="fa-editor-section">
-        <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:.75rem">
-          <strong>Funnel Steps</strong>
-          <button id="fa-load-preset" class="btn-sm">↺ Load Preset</button>
-          <button id="fa-add-step"    class="btn-sm btn-outline">+ Add Step</button>
-          <button id="fa-run"         style="margin-left:auto">▶ Run Funnel</button>
-        </div>
-        <div id="fa-steps-list"></div>
-        <div id="fa-run-status" class="status" style="margin-top:.4rem"></div>
-      </section>
-
-      <!-- ── Event browser ── -->
-      <section style="margin-top:1rem">
-        <details id="fa-event-browser">
-          <summary style="cursor:pointer;font-weight:600;user-select:none">
-            🔍 Event Browser <small style="font-weight:400;color:#888">(find event IDs to add)</small>
+      <!-- ── Top toolbar ── -->
+      <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:1rem">
+        <button id="fa-run-demo" style="background:#2E8B57;color:#fff;border:none;
+          padding:.45rem 1.1rem;border-radius:6px;font-size:.92rem;font-weight:600;cursor:pointer">
+          ▶ Run Demo
+        </button>
+        <span style="color:#bbb;font-size:.85rem">or</span>
+        <details id="fa-custom-section" style="flex:1">
+          <summary style="cursor:pointer;font-size:.85rem;color:#888;user-select:none;list-style:none">
+            ⚙ Custom Funnel <small>(advanced)</small>
           </summary>
-          <div style="margin-top:.5rem;display:flex;gap:.5rem;align-items:center">
-            <input id="fa-event-search" type="text" placeholder="Filter by prefix e.g. 01.3160."
-                   style="flex:1;max-width:280px" />
-            <button id="fa-event-search-btn" class="btn-sm">Search</button>
+          <div style="margin-top:.75rem">
+            <!-- ── Step editor ── -->
+            <section id="fa-editor-section">
+              <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:.6rem">
+                <strong style="font-size:.88rem">Steps</strong>
+                <button id="fa-load-preset" class="btn-sm">↺ Load Preset</button>
+                <button id="fa-add-step"    class="btn-sm btn-outline">+ Add Step</button>
+                <button id="fa-run"         style="margin-left:auto">▶ Run Funnel</button>
+              </div>
+              <div id="fa-steps-list"></div>
+            </section>
+
+            <!-- ── Event browser ── -->
+            <section style="margin-top:.75rem">
+              <details id="fa-event-browser">
+                <summary style="cursor:pointer;font-weight:600;user-select:none">
+                  🔍 Event Browser <small style="font-weight:400;color:#888">(find event IDs)</small>
+                </summary>
+                <div style="margin-top:.5rem;display:flex;gap:.5rem;align-items:center">
+                  <input id="fa-event-search" type="text" placeholder="Filter by prefix e.g. 01.3160."
+                         style="flex:1;max-width:280px" />
+                  <button id="fa-event-search-btn" class="btn-sm">Search</button>
+                </div>
+                <div id="fa-event-list" style="margin-top:.5rem;max-height:220px;overflow-y:auto;
+                     font-size:.8rem;border:1px solid #ddd;border-radius:4px;padding:.4rem"></div>
+              </details>
+            </section>
           </div>
-          <div id="fa-event-list" style="margin-top:.5rem;max-height:220px;overflow-y:auto;
-               font-size:.8rem;border:1px solid #ddd;border-radius:4px;padding:.4rem"></div>
         </details>
-      </section>
+      </div>
+      <div id="fa-run-status" class="status" style="margin-bottom:.4rem"></div>
 
       <!-- ── Results ── -->
       <section id="fa-result-section" style="display:none;margin-top:1.25rem">
@@ -78,12 +93,12 @@ export default {
 
     this._injectStyles();
     this._bindEvents(container);
-    this._loadPreset(container);
   },
 
   // ── Event binding ──────────────────────────────────────────────────────────
 
   _bindEvents(container) {
+    container.querySelector("#fa-run-demo").onclick         = () => this._runDemo(container);
     container.querySelector("#fa-load-preset").onclick      = () => this._loadPreset(container);
     container.querySelector("#fa-add-step").onclick         = () => this._addStep(container);
     container.querySelector("#fa-run").onclick              = () => this._runFunnel(container);
@@ -93,6 +108,43 @@ export default {
     container.querySelector("#fa-event-search").addEventListener("keydown", e => {
       if (e.key === "Enter") this._searchEvents(container);
     });
+  },
+
+  // ── Run Demo — calls preset endpoint directly, hides raw config ────────────
+
+  async _runDemo(container) {
+    const status  = container.querySelector("#fa-run-status");
+    const section = container.querySelector("#fa-result-section");
+    const insightSection = container.querySelector("#fa-insight-section");
+
+    // Collapse custom section so raw event IDs stay hidden
+    const customSection = container.querySelector("#fa-custom-section");
+    if (customSection.hasAttribute("open")) customSection.removeAttribute("open");
+
+    status.textContent = "Running demo…";
+    section.style.display = "none";
+    insightSection.style.display = "none";
+
+    try {
+      const resp = await fetch(`${API}/conversion`);   // GET preset, no body
+      const data = await resp.json();
+      if (!resp.ok) { status.textContent = `Error: ${data.detail || resp.statusText}`; return; }
+
+      // Build _lastResult from preset step names only (no event IDs exposed)
+      this._lastResult = {
+        steps: (data.funnel ?? []).map(s => ({ name: s.name, event_ids: [], event_prefix: "" })),
+        funnel_result: data.funnel,
+      };
+
+      status.textContent = "";
+      section.style.display = "";
+      this._renderSummary(container, data);
+      this._renderFunnel(container, data);
+      this._getInsight(container);
+
+    } catch (e) {
+      status.textContent = `Network error: ${e.message}`;
+    }
   },
 
   // ── Preset loader ──────────────────────────────────────────────────────────

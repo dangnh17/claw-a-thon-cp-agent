@@ -16,7 +16,7 @@ import traceback
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -54,7 +54,7 @@ _IN_PROGRESS_LOCK = threading.Lock()
 
 class RunRequest(BaseModel):
     input_glob: str = "output/tracking_events_v2/*.parquet"
-    date_filter: str | None = None  # e.g. "2026-06-12"; None = all dates
+    date_filter: Optional[str] = None  # e.g. "2026-06-12"; None = all dates
     force_rerun: bool = False        # skip step1/2b/3 cache and run fresh
 
 
@@ -416,7 +416,7 @@ async def available_dates(input_glob: str = "output/tracking_events_v2/*.parquet
 @router.get("/windows")
 async def window_counts(
     input_glob: str = "output/tracking_events_v2/*.parquet",
-    date_filter: str | None = None,
+    date_filter: Optional[str] = None,
 ):
     """Return event count per 3h time window for the given date."""
     resolved_files = _resolve_parquet_files(input_glob)
@@ -600,7 +600,7 @@ async def run_status(run_id: str):
 
 
 @router.get("/latest")
-async def latest_run(date: str | None = None):
+async def latest_run(date: Optional[str] = None):
     """Return the latest successful run. If date is provided, filter by data_date."""
     rows = _read_all_runs()
     rows.sort(key=lambda r: r.get("started_at") or "", reverse=True)
