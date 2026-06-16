@@ -24,8 +24,36 @@ export default {
   _pollingRunId: null,
   _latestSuccessfulRunId: null,
   _dataDate: null,
+  _loadTimer: null,
 
   render(container) {
+    if (!document.getElementById("ji-loading-styles")) {
+      const s = document.createElement("style");
+      s.id = "ji-loading-styles";
+      s.textContent = `
+        @keyframes ji-spin { to { transform: rotate(360deg); } }
+        @keyframes ji-pop  { 0%,100% { transform: scale(1); } 50% { transform: scale(1.25); } }
+        @keyframes ji-dot  { 0%,80%,100% { opacity:.2; transform:translateY(0); } 40% { opacity:1; transform:translateY(-4px); } }
+        .ji-loading { display:flex; flex-direction:column; align-items:center; justify-content:center;
+          padding:36px 20px; background:#fff; border:1px solid #e2e8f0; border-radius:12px;
+          margin:16px 0; box-shadow:0 1px 3px rgba(0,0,0,.06); gap:14px; }
+        .ji-loading-ring-wrap { position:relative; width:64px; height:64px; }
+        .ji-loading-ring { position:absolute; inset:0; border-radius:50%;
+          border:3px solid #e2e8f0; border-top-color:#6366f1;
+          animation:ji-spin 0.9s linear infinite; }
+        .ji-loading-icon { position:absolute; inset:0; display:flex; align-items:center;
+          justify-content:center; font-size:26px; animation:ji-pop 1.8s ease-in-out infinite; }
+        .ji-loading-title { font-size:14px; font-weight:700; color:#0f172a; }
+        .ji-loading-sub   { font-size:12px; color:#64748b; }
+        .ji-loading-dots  { display:flex; gap:5px; }
+        .ji-loading-dots span { width:6px; height:6px; border-radius:50%; background:#6366f1;
+          animation:ji-dot 1.2s ease-in-out infinite; }
+        .ji-loading-dots span:nth-child(2) { animation-delay:.2s; }
+        .ji-loading-dots span:nth-child(3) { animation-delay:.4s; }
+      `;
+      document.head.appendChild(s);
+    }
+
     container.innerHTML = `
       <h2>${this.icon} ${this.label}</h2>
 
@@ -58,6 +86,7 @@ export default {
         <div>
           <button id="ji-btn-report" disabled>Generate Report</button>
         </div>
+        <div id="ji-loading"></div>
         <div id="ji-status" style="display:none;margin-top:10px;padding:10px 14px;border-radius:6px;font-size:0.9em;background:#f0f4ff;border:1px solid #c7d4f0;color:#334"></div>
       </section>
 
@@ -208,7 +237,8 @@ export default {
   // ── Run Pipeline ──────────────────────────────────────────────────────────
 
   async _startRun(container, forceRerun = false) {
-    this._setStatus(container, forceRerun ? "Re-running pipeline (cache cleared)…" : "Starting pipeline…");
+    const title = forceRerun ? "Re-running pipeline…" : "Starting pipeline…";
+    this._showLoading(container, ["⚙️","📦","🔄","🛠️","📂"], title, "Đang xử lý dữ liệu tracking");
     try {
       const dateFilter = this._selectedDate(container);
       const resp = await fetch(`${API_PREFIX}/run`, {
@@ -218,12 +248,13 @@ export default {
       });
       const data = await resp.json();
       if (!resp.ok) {
+        this._hideLoading(container);
         this._setStatus(container, `Error: ${data.detail || resp.status}`);
         return;
       }
-      this._setStatus(container, `Pipeline started (run ${data.run_id.slice(0, 8)}…)`);
       this._startPolling(container, data.run_id);
     } catch (e) {
+      this._hideLoading(container);
       this._setStatus(container, `Network error: ${e.message}`);
     }
   },
@@ -238,7 +269,7 @@ export default {
     const reportSection = container.querySelector("#ji-report-section");
     if (reportSection) reportSection.style.display = "none";
 
-    this._setStatus(container, "Regenerating report…");
+    this._showLoading(container, ["🧠","📊","✍️","💡","📈","🔍"], "Đang tạo report…", "AI đang phân tích journey theo time window");
     try {
       const resp = await fetch(`${API_PREFIX}/report`, {
         method: "POST",
@@ -247,12 +278,13 @@ export default {
       });
       const data = await resp.json();
       if (!resp.ok) {
+        this._hideLoading(container);
         this._setStatus(container, `Error: ${data.detail || resp.status}`);
         return;
       }
-      this._setStatus(container, `Report generation started…`);
       this._startPolling(container, data.run_id);
     } catch (e) {
+      this._hideLoading(container);
       this._setStatus(container, `Network error: ${e.message}`);
     }
   },
@@ -274,6 +306,7 @@ export default {
 
       if (target.status === "ok") {
         this._stopPolling();
+        this._hideLoading(container);
         this._latestSuccessfulRunId = runId;
         // Swap to Re-run button
         const btnRun = container.querySelector("#ji-btn-run");
@@ -292,6 +325,7 @@ export default {
         this._loadLatest(container);
       } else if (target.status === "error") {
         this._stopPolling();
+        this._hideLoading(container);
         const detail = target.error_detail || "Unknown error";
         this._setStatus(container, `Run failed at ${target.error_step || "unknown step"}: ${detail.slice(0, 120)}`);
         this._updateButtonStates(container);
@@ -472,6 +506,43 @@ export default {
   _stripGuardrails(md) {
     // Remove ## Method Guardrails section and everything after it
     return md.replace(/^##\s*Method Guardrails[\s\S]*/m, "").trimEnd();
+  },
+
+  // ── Loading ───────────────────────────────────────────────────────────────
+
+  _showLoading(container, icons, title, subtitle) {
+    this._stopLoadingTimer();
+    const wrap = container.querySelector("#ji-loading");
+    if (!wrap) return;
+    let idx = 0;
+    const render = () => {
+      wrap.innerHTML = `
+        <div class="ji-loading">
+          <div class="ji-loading-ring-wrap">
+            <div class="ji-loading-ring"></div>
+            <div class="ji-loading-icon">${icons[idx]}</div>
+          </div>
+          <div class="ji-loading-title">${title}</div>
+          <div class="ji-loading-sub">${subtitle}</div>
+          <div class="ji-loading-dots"><span></span><span></span><span></span></div>
+        </div>`;
+    };
+    render();
+    this._loadTimer = setInterval(() => {
+      idx = (idx + 1) % icons.length;
+      const el = wrap.querySelector(".ji-loading-icon");
+      if (el) el.textContent = icons[idx];
+    }, 700);
+  },
+
+  _stopLoadingTimer() {
+    if (this._loadTimer) { clearInterval(this._loadTimer); this._loadTimer = null; }
+  },
+
+  _hideLoading(container) {
+    this._stopLoadingTimer();
+    const wrap = container.querySelector("#ji-loading");
+    if (wrap) wrap.innerHTML = "";
   },
 
   // ── Helpers ───────────────────────────────────────────────────────────────

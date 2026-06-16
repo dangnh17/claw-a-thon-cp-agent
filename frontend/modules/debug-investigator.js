@@ -10,25 +10,6 @@
 
 const API_PREFIX = "/api/debug";
 
-const VIS_CSS = "https://cdnjs.cloudflare.com/ajax/libs/vis-timeline/7.7.2/vis-timeline-graph2d.min.css";
-const VIS_JS  = "https://cdnjs.cloudflare.com/ajax/libs/vis-timeline/7.7.2/vis-timeline-graph2d.min.js";
-
-function _loadVis() {
-  return new Promise((resolve, reject) => {
-    if (window.vis) { resolve(); return; }
-    if (!document.querySelector(`link[href="${VIS_CSS}"]`)) {
-      const link = document.createElement("link");
-      link.rel = "stylesheet"; link.href = VIS_CSS;
-      document.head.appendChild(link);
-    }
-    const script = document.createElement("script");
-    script.src = VIS_JS;
-    script.onload  = resolve;
-    script.onerror = reject;
-    document.head.appendChild(script);
-  });
-}
-
 export default {
   id: "debug-investigator",
   label: "Debug",
@@ -85,6 +66,29 @@ export default {
         .di-banner.info  .di-bt { color: #0c4a6e; }
         .di-banner.info  .di-bx { color: #075985; }
 
+        /* ── Loading card ── */
+        @keyframes di-spin  { to { transform: rotate(360deg); } }
+        @keyframes di-pop   { 0%,100% { transform: scale(1); } 50% { transform: scale(1.25); } }
+        @keyframes di-dot   { 0%,80%,100% { opacity: .2; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-4px); } }
+        .di-loading { display: flex; flex-direction: column; align-items: center; justify-content: center;
+          padding: 36px 20px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+          margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06); gap: 14px; }
+        .di-loading-ring-wrap { position: relative; width: 64px; height: 64px; }
+        .di-loading-ring { position: absolute; inset: 0; border-radius: 50%;
+          border: 3px solid #e2e8f0;
+          border-top-color: #6366f1;
+          animation: di-spin 0.9s linear infinite; }
+        .di-loading-icon { position: absolute; inset: 0; display: flex; align-items: center;
+          justify-content: center; font-size: 26px;
+          animation: di-pop 1.8s ease-in-out infinite; }
+        .di-loading-title { font-size: 14px; font-weight: 700; color: #0f172a; }
+        .di-loading-sub   { font-size: 12px; color: #64748b; }
+        .di-loading-dots  { display: flex; gap: 5px; }
+        .di-loading-dots span { width: 6px; height: 6px; border-radius: 50%; background: #6366f1;
+          animation: di-dot 1.2s ease-in-out infinite; }
+        .di-loading-dots span:nth-child(2) { animation-delay: .2s; }
+        .di-loading-dots span:nth-child(3) { animation-delay: .4s; }
+
         /* ── Stats bar ── */
         .di-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 20px; }
         .di-stats-ext { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 12px; }
@@ -110,89 +114,6 @@ export default {
         .di-tab-pane { display: none; }
         .di-tab-pane.active { display: block; }
 
-        /* ── Filter bar ── */
-        .di-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 12px; padding: 10px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; }
-        .di-filters label { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; color: #475569; cursor: pointer; }
-        .di-filters input[type=checkbox] { cursor: pointer; accent-color: #6366f1; }
-        .di-filter-search { flex: 1; min-width: 160px; padding: 5px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; color: #1e293b; background: #fff; outline: none; }
-        .di-filter-search:focus { border-color: #6366f1; }
-        .di-tl-hint { font-size: 11px; color: #94a3b8; margin-left: auto; white-space: nowrap; }
-        .di-tl-zoom { display: flex; gap: 4px; }
-        .di-tl-zoom button { padding: 3px 10px; font-size: 12px; background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; color: #475569; }
-        .di-tl-zoom button:hover { background: #f1f5f9; }
-
-        /* ── vis-timeline wrapper ── */
-        .di-vis-wrap { border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; background: #fff; }
-        #di-vis-timeline { width: 100%; min-height: 480px; }
-
-        .di-vis-wrap .vis-timeline { border: none !important; background: #fff !important; }
-        .di-vis-wrap .vis-panel.vis-bottom,.di-vis-wrap .vis-panel.vis-center,
-        .di-vis-wrap .vis-panel.vis-top,.di-vis-wrap .vis-panel.vis-left,
-        .di-vis-wrap .vis-panel.vis-right { border-color: #e2e8f0 !important; }
-        .di-vis-wrap .vis-time-axis .vis-text { color: #94a3b8 !important; font-family: monospace !important; font-size: 11px !important; }
-        .di-vis-wrap .vis-time-axis .vis-grid.vis-minor { border-color: #f1f5f9 !important; }
-        .di-vis-wrap .vis-time-axis .vis-grid.vis-major { border-color: #e2e8f0 !important; }
-        .di-vis-wrap .vis-labelset .vis-label { background: #f8fafc !important; color: #475569 !important; font-family: inherit !important; font-size: 12px !important; font-weight: 600 !important; border-bottom: 1px solid #e2e8f0 !important; }
-        .di-vis-wrap .vis-foreground .vis-group { border-bottom: 1px solid #f1f5f9 !important; }
-        .di-vis-wrap .vis-item { font-family: inherit !important; font-size: 11px !important; border-radius: 4px !important; cursor: pointer !important; border-width: 1px !important; padding: 1px 6px !important; }
-        .di-vis-wrap .vis-item.vis-tracking     { background: #ede9fe !important; border-color: #7c3aed !important; color: #5b21b6 !important; }
-        .di-vis-wrap .vis-item.vis-access       { background: #dbeafe !important; border-color: #2563eb !important; color: #1d4ed8 !important; }
-        .di-vis-wrap .vis-item.vis-vital        { background: #d1fae5 !important; border-color: #059669 !important; color: #065f46 !important; }
-        .di-vis-wrap .vis-item.vis-vital-error  { background: #fee2e2 !important; border-color: #dc2626 !important; color: #991b1b !important; }
-        .di-vis-wrap .vis-item.vis-selected     { box-shadow: 0 0 0 2px rgba(99,102,241,.5) !important; z-index: 10 !important; }
-        .di-vis-wrap .vis-panel.vis-background  { background: #fafafa !important; }
-
-        /* ── Detail panel ── */
-        .di-detail-scrim  { position: fixed; inset: 0; background: rgba(0,0,0,.25); z-index: 500; opacity: 0; pointer-events: none; transition: opacity .2s; }
-        .di-detail-scrim.open { opacity: 1; pointer-events: auto; }
-        .di-detail-panel  { position: fixed; top: 0; right: 0; bottom: 0; width: 460px; max-width: 90vw; background: #fff; border-left: 1px solid #e2e8f0; box-shadow: -8px 0 32px rgba(0,0,0,.1); z-index: 501; display: flex; flex-direction: column; transform: translateX(100%); transition: transform .25s cubic-bezier(.4,0,.2,1); }
-        .di-detail-panel.open { transform: translateX(0); }
-        .di-dp-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #e2e8f0; flex-shrink: 0; }
-        .di-dp-header h3 { font-size: 15px; font-weight: 700; color: #0f172a; margin: 0; max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .di-dp-close { background: none; border: none; cursor: pointer; font-size: 18px; color: #94a3b8; padding: 2px 6px; border-radius: 4px; line-height: 1; }
-        .di-dp-close:hover { color: #475569; background: #f1f5f9; }
-        .di-dp-body { flex: 1; overflow-y: auto; padding: 20px; }
-
-        /* detail fields */
-        .di-dp-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 4px; margin-bottom: 14px; }
-        .di-dp-tag.tracking    { background: #ede9fe; color: #5b21b6; }
-        .di-dp-tag.access      { background: #dbeafe; color: #1d4ed8; }
-        .di-dp-tag.vital       { background: #d1fae5; color: #065f46; }
-        .di-dp-tag.vital-error { background: #fee2e2; color: #991b1b; }
-        .di-dp-tag.sev-warn    { background: #fef3c7; color: #92400e; margin-left: 6px; }
-        .di-dp-field { margin-bottom: 12px; }
-        .di-dp-field-lbl { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: #94a3b8; margin-bottom: 2px; }
-        .di-dp-field-val { font-size: 13px; color: #1e293b; word-break: break-all; }
-        .di-dp-field-val.mono { font-family: "SF Mono","Fira Code",monospace; font-size: 12px; }
-        .di-dp-field-val.large { font-size: 18px; font-weight: 700; font-family: inherit; color: #0f172a; }
-        .di-dp-err { background: #fff1f2; border: 1px solid #fecdd3; border-radius: 6px; padding: 10px 12px; margin-bottom: 14px; font-size: 12px; color: #be123c; }
-        .di-dp-divider { border: none; border-top: 1px solid #f1f5f9; margin: 16px 0; }
-        .di-dp-json { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; font-size: 11px; font-family: "SF Mono","Fira Code",monospace; color: #475569; white-space: pre-wrap; word-break: break-all; max-height: 200px; overflow-y: auto; margin-top: 4px; }
-        .di-map-badge { display: inline-block; font-size: 10px; padding: 1px 7px; border-radius: 4px; font-weight: 600; margin-left: 6px; }
-        .di-map-badge.exact    { background: #d1fae5; color: #065f46; }
-        .di-map-badge.fallback { background: #dbeafe; color: #1d4ed8; }
-        .di-map-badge.unknown  { background: #f1f5f9; color: #64748b; }
-
-        /* ── Session journey ── */
-        .di-journey-title  { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #64748b; margin-bottom: 10px; }
-        .di-journey-wrap   { padding-bottom: 4px; }
-        .di-journey        { display: flex; flex-direction: column; gap: 0; }
-        .di-journey-step   { display: flex; flex-direction: column; cursor: pointer; }
-        .di-journey-card   { width: 100%; padding: 8px 12px; border-radius: 8px; box-sizing: border-box; background: #f8fafc; border: 1px solid #e2e8f0; color: #334155; transition: background .15s, border-color .15s; }
-        .di-journey-card:hover  { background: #ede9fe; border-color: #7c3aed; }
-        .di-journey-card.active { background: #7c3aed; border-color: #5b21b6; color: #fff; box-shadow: 0 0 0 3px rgba(124,58,237,.2); }
-        .di-journey-card-hd  { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-        .di-journey-card-id  { font-size: 12px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .di-journey-card-ts  { font-size: 10px; font-family: monospace; color: #94a3b8; flex-shrink: 0; }
-        .di-journey-card.active .di-journey-card-ts  { color: rgba(255,255,255,.65); }
-        .di-journey-card-name { font-size: 11px; color: #475569; margin-top: 3px; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .di-journey-card.active .di-journey-card-name { color: rgba(255,255,255,.8); }
-        .di-journey-card-meta { font-size: 10px; font-family: monospace; color: #64748b; margin-top: 4px; background: rgba(0,0,0,.04); border-radius: 4px; padding: 3px 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .di-journey-card.active .di-journey-card-meta { background: rgba(255,255,255,.15); color: rgba(255,255,255,.8); }
-        .di-journey-card-err  { display: inline-block; margin-top: 4px; font-size: 10px; font-weight: 700; background: #fee2e2; color: #dc2626; border-radius: 4px; padding: 1px 6px; }
-        .di-journey-card.active .di-journey-card-err { background: rgba(255,255,255,.25); color: #fff; }
-        .di-journey-arrow  { font-size: 11px; color: #cbd5e1; padding: 3px 0 3px 14px; line-height: 1; }
-
         /* ── Insight ── */
         .di-insight-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
         .di-insight-summary { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9; }
@@ -204,11 +125,8 @@ export default {
         .di-insight-section h4 { margin: 0 0 6px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #64748b; }
         .di-insight-section p  { margin: 0; font-size: 13px; color: #334155; line-height: 1.65; }
         .di-insight-list { margin: 0; padding: 0 0 0 18px; font-size: 13px; color: #334155; line-height: 1.8; }
-        .di-evidence-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 12px; border-radius: 8px; border: 1px solid #e2e8f0; background: #f8fafc; margin-bottom: 8px; cursor: pointer; transition: background .15s, border-color .15s; }
-        .di-evidence-item:hover { background: #ede9fe; border-color: #7c3aed; }
-        .di-evidence-item .di-ev-id { font-size: 11px; font-weight: 700; font-family: monospace; color: #7c3aed; white-space: nowrap; }
-        .di-evidence-item .di-ev-ts { font-size: 10px; font-family: monospace; color: #94a3b8; }
-        .di-evidence-item .di-ev-reason { font-size: 12px; color: #334155; margin-top: 2px; }
+        .di-evidence-item { padding: 8px 12px; border-radius: 8px; border: 1px solid #e2e8f0; background: #f8fafc; margin-bottom: 8px; }
+        .di-evidence-item .di-ev-reason { font-size: 12px; color: #334155; line-height: 1.6; }
 
         .di-empty { text-align: center; padding: 48px 20px; color: #94a3b8; font-size: 13px; }
         .di-btn-ghost { padding: 6px 14px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 7px; font-size: 12px; font-weight: 500; color: #475569; cursor: pointer; }
@@ -228,6 +146,7 @@ export default {
           </div>
         </div>
 
+        <div id="di-loading" style="display:none"></div>
         <div id="di-banners"></div>
 
         <div id="di-result" style="display:none">
@@ -238,54 +157,17 @@ export default {
           </div>
           <div class="di-stats-ext" id="di-stats-ext" style="display:none"></div>
 
-          <div class="di-tabs">
-            <div class="di-tab active" data-pane="timeline">📊 Timeline</div>
-            <div class="di-tab" data-pane="insight">💡 Insight</div>
-          </div>
-
-          <div class="di-tab-pane active" id="pane-timeline">
-            <div class="di-filters">
-              <label><input type="checkbox" id="f-track" checked> <span style="color:#7c3aed">Tracking</span></label>
-              <label><input type="checkbox" id="f-access" checked> <span style="color:#2563eb">Access</span></label>
-              <label><input type="checkbox" id="f-vital"  checked> <span style="color:#059669">Vital</span></label>
-              <input class="di-filter-search" id="f-search" placeholder="Tìm event, page, endpoint…">
-              <span class="di-tl-hint">Ctrl+scroll để zoom · Click event để xem chi tiết</span>
-              <div class="di-tl-zoom">
-                <button id="tl-zoom-in">＋</button>
-                <button id="tl-zoom-out">－</button>
-                <button id="tl-fit">Fit</button>
-              </div>
-            </div>
-            <div class="di-vis-wrap">
-              <div id="di-vis-timeline"></div>
-            </div>
-          </div>
-
-          <div class="di-tab-pane" id="pane-insight">
-            <div class="di-insight-card" id="di-insight">
-              <div class="di-empty">Chạy điều tra để xem insight</div>
-            </div>
+          <div class="di-insight-card" id="di-insight">
+            <div class="di-empty">Chạy điều tra để xem insight</div>
           </div>
         </div>
-      </div>
-
-      <!-- Detail panel -->
-      <div class="di-detail-scrim" id="di-scrim"></div>
-      <div class="di-detail-panel"  id="di-detail-panel">
-        <div class="di-dp-header">
-          <h3 id="di-dp-title">Event Detail</h3>
-          <button class="di-dp-close" id="di-dp-close">✕</button>
-        </div>
-        <div class="di-dp-body" id="di-dp-body"></div>
       </div>
     `;
 
-    this._events      = [];
-    this._parsed      = null;
-    this._insight     = null;
-    this._visTimeline = null;
-    this._visItems    = null;
-    this._activeId    = null;
+    this._events    = [];
+    this._parsed    = null;
+    this._insight   = null;
+    this._loadTimer = null;
     this._bind(container);
   },
 
@@ -294,33 +176,6 @@ export default {
   _bind(c) {
     c.querySelector("#di-run").onclick   = () => this._run(c);
     c.querySelector("#di-reset").onclick = () => this._reset(c);
-
-    c.querySelectorAll(".di-tab").forEach(tab => {
-      tab.onclick = () => {
-        c.querySelectorAll(".di-tab").forEach(t => t.classList.remove("active"));
-        c.querySelectorAll(".di-tab-pane").forEach(p => p.classList.remove("active"));
-        tab.classList.add("active");
-        c.querySelector(`#pane-${tab.dataset.pane}`).classList.add("active");
-        if (tab.dataset.pane === "timeline" && this._visTimeline)
-          setTimeout(() => this._visTimeline.redraw(), 50);
-      };
-    });
-
-    const re = () => this._applyFilters(c);
-    ["#f-track","#f-access","#f-vital"].forEach(id => c.querySelector(id).onchange = re);
-    c.querySelector("#f-search").oninput = re;
-
-    c.querySelector("#tl-zoom-in").onclick  = () => this._visTimeline?.zoomIn(0.4);
-    c.querySelector("#tl-zoom-out").onclick = () => this._visTimeline?.zoomOut(0.4);
-    c.querySelector("#tl-fit").onclick      = () => this._visTimeline?.fit({ animation: { duration: 400 } });
-
-    const closePanel = () => {
-      document.getElementById("di-detail-panel")?.classList.remove("open");
-      document.getElementById("di-scrim")?.classList.remove("open");
-      this._activeId = null;
-    };
-    document.getElementById("di-dp-close").onclick = closePanel;
-    document.getElementById("di-scrim").onclick     = closePanel;
   },
 
   // ── Run ───────────────────────────────────────────────────────────────────
@@ -338,13 +193,9 @@ export default {
     c.querySelector("#di-parsed").style.display = "none";
     c.querySelector("#di-stats-ext").style.display = "none";
     c.querySelector("#di-insight").innerHTML = `<div class="di-empty">Chạy điều tra để xem insight</div>`;
-    if (this._visTimeline) { this._visTimeline.destroy(); this._visTimeline = null; }
-    this._visItems = null;
     this._events = [];
-    document.getElementById("di-detail-panel")?.classList.remove("open");
-    document.getElementById("di-scrim")?.classList.remove("open");
 
-    this._addBanner(c, "info", "🤖", "Đang đọc ticket…", "AI đang phân tích nội dung ticket.");
+    this._showLoading(c, ["🤖","📄","🔎","💭"], "Đang đọc ticket…", "AI đang phân tích nội dung ticket");
     let parsed;
     try {
       const r = await fetch(`${API_PREFIX}/parse-ticket`, {
@@ -354,11 +205,11 @@ export default {
       if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
       parsed = await r.json();
     } catch (e) {
-      c.querySelector("#di-banners").innerHTML = "";
+      this._hideLoading(c);
       this._addBanner(c, "error", "❌", "Parse thất bại", this._e(e.message));
       btn.disabled = false; return;
     }
-    c.querySelector("#di-banners").innerHTML = "";
+    this._hideLoading(c);
 
     this._parsed = parsed;
     this._showParsed(c, parsed);
@@ -375,7 +226,7 @@ export default {
       btn.disabled = false; return;
     }
 
-    this._addBanner(c, "info", "🔍", "Đang điều tra…", "Agent đang lập kế hoạch và query log.");
+    this._showLoading(c, ["🔍","🧠","📊","⚡","🗂️","💡"], "Đang điều tra…", "Agent đang lập kế hoạch và query log");
     let data;
     try {
       const r = await fetch(`${API_PREFIX}/investigate`, {
@@ -390,11 +241,11 @@ export default {
       if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
       data = await r.json();
     } catch (e) {
-      c.querySelector("#di-banners").innerHTML = "";
+      this._hideLoading(c);
       this._addBanner(c, "error", "❌", "Điều tra thất bại", this._e(e.message));
       btn.disabled = false; return;
     }
-    c.querySelector("#di-banners").innerHTML = "";
+    this._hideLoading(c);
 
     this._events = data.events || [];
 
@@ -408,12 +259,47 @@ export default {
     this._renderBanners(c, data);
 
     c.querySelector("#di-result").style.display = "";
-    if (this._events.length > 0) {
-      await this._initVisTimeline(c);
-    }
     this._renderInsight(c, data);
 
     btn.disabled = false;
+  },
+
+  // ── Loading ───────────────────────────────────────────────────────────────
+
+  _showLoading(c, icons, title, subtitle) {
+    this._stopLoading();
+    const wrap = c.querySelector("#di-loading");
+    let idx = 0;
+    const render = () => {
+      wrap.innerHTML = `
+        <div class="di-loading">
+          <div class="di-loading-ring-wrap">
+            <div class="di-loading-ring"></div>
+            <div class="di-loading-icon">${icons[idx]}</div>
+          </div>
+          <div class="di-loading-title">${this._e(title)}</div>
+          <div class="di-loading-sub">${this._e(subtitle)}</div>
+          <div class="di-loading-dots"><span></span><span></span><span></span></div>
+        </div>`;
+    };
+    render();
+    wrap.style.display = "";
+    this._loadTimer = setInterval(() => {
+      idx = (idx + 1) % icons.length;
+      const el = wrap.querySelector(".di-loading-icon");
+      if (el) el.textContent = icons[idx];
+    }, 700);
+  },
+
+  _stopLoading() {
+    if (this._loadTimer) { clearInterval(this._loadTimer); this._loadTimer = null; }
+  },
+
+  _hideLoading(c) {
+    this._stopLoading();
+    const wrap = c.querySelector("#di-loading");
+    wrap.style.display = "none";
+    wrap.innerHTML = "";
   },
 
   // ── Banners ───────────────────────────────────────────────────────────────
@@ -494,243 +380,6 @@ export default {
     c.querySelector("#di-stats-ext").style.display = "none";
   },
 
-  // ── vis-timeline ──────────────────────────────────────────────────────────
-
-  async _initVisTimeline(c) {
-    await _loadVis();
-    const el = c.querySelector("#di-vis-timeline");
-
-    const groups = new vis.DataSet([
-      { id: "tracking", content: "🟣 Tracking" },
-      { id: "access",   content: "🔵 Access"   },
-      { id: "vital",    content: "🟢 Vital"     },
-    ]);
-    const items = new vis.DataSet(this._buildVisItems(this._events));
-
-    const options = {
-      stack: true,
-      showMajorLabels: true,
-      showMinorLabels: true,
-      orientation: "top",
-      zoomMin: 1000,
-      zoomMax: 1000 * 60 * 60 * 6,
-      zoomKey: "ctrlKey",
-      selectable: true,
-      margin: { item: { horizontal: 4, vertical: 4 }, axis: 8 },
-      groupOrder: "id",
-      type: "box",
-      groupHeightMode: "auto",
-    };
-
-    if (this._visTimeline) this._visTimeline.destroy();
-    this._visTimeline = new vis.Timeline(el, items, groups, options);
-    this._visItems    = items;
-
-    this._visTimeline.on("click", (props) => {
-      if (props.item == null) return;
-      const item = items.get(props.item);
-      if (!item) return;
-      this._openDetail(item._raw);
-    });
-
-    this._visTimeline.fit({ animation: false });
-  },
-
-  _buildVisItems(events) {
-    return events.map((e) => {
-      const dt    = new Date(e.ts);
-      const isErr = e.severity === "error" || e.severity === "fatal";
-      let cls, label;
-
-      if (e.source === "tracking") {
-        cls   = "vis-tracking";
-        label = e.raw?.event_id || e.title || "–";
-      } else if (e.source === "access") {
-        cls   = "vis-access";
-        label = e.subtitle || e.raw?.page || "–";
-      } else {
-        cls   = isErr ? "vis-vital-error" : "vis-vital";
-        label = e.subtitle || e.raw?.endpoint || "–";
-      }
-
-      const short = label.length > 38 ? label.slice(0, 38) + "…" : label;
-      return {
-        id: e.id,          // use event id string as vis item id
-        group: e.source,
-        start: dt,
-        content: this._e(short),
-        className: cls,
-        _raw: e,
-      };
-    });
-  },
-
-  _applyFilters(c) {
-    if (!this._visItems) return;
-    const showTrack  = c.querySelector("#f-track").checked;
-    const showAccess = c.querySelector("#f-access").checked;
-    const showVital  = c.querySelector("#f-vital").checked;
-    const q          = c.querySelector("#f-search").value.toLowerCase();
-
-    const filtered = this._events.filter(e => {
-      if (!showTrack  && e.source === "tracking") return false;
-      if (!showAccess && e.source === "access")   return false;
-      if (!showVital  && e.source === "vital")    return false;
-      if (q) {
-        const hay = [
-          e.id, e.title, e.subtitle,
-          e.raw?.event_id, e.raw?.page, e.raw?.endpoint,
-          e.raw?.error_message, e.raw?.metadata,
-          e.mapping?.event_name, e.mapping?.screen_name,
-        ].filter(Boolean).join(" ").toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      return true;
-    });
-
-    this._visItems.clear();
-    this._visItems.add(this._buildVisItems(filtered));
-    this._visTimeline.fit({ animation: { duration: 300 } });
-  },
-
-  // ── Detail panel ──────────────────────────────────────────────────────────
-
-  _openDetail(e) {
-    if (!e) return;
-    this._activeId = e.id;
-    const isErr = e.severity === "error" || e.severity === "fatal";
-    const tagCls = e.source === "tracking" ? "tracking"
-      : e.source === "access" ? "access"
-      : isErr ? "vital-error" : "vital";
-    const tagLabel = e.source === "tracking" ? "TRACKING"
-      : e.source === "access" ? "ACCESS"
-      : isErr ? "VITAL ⚠" : "VITAL";
-
-    document.getElementById("di-dp-title").textContent =
-      e.source === "tracking" ? (e.raw?.event_id || e.title || "Tracking Event")
-      : e.source === "access"  ? (e.subtitle || e.raw?.page || "Access Log")
-      : (e.subtitle || e.raw?.endpoint || "Vital Event");
-
-    let html = `<span class="di-dp-tag ${tagCls}">${tagLabel}</span>`;
-    if (isErr) html += `<span class="di-dp-tag sev-warn">⚠ ERROR</span>`;
-
-    // Common fields
-    html += this._dpField("Event ID", e.id);
-    html += this._dpField("Timestamp", e.timestamp, true);
-    html += this._dpField("Title", e.title);
-    if (e.subtitle) html += this._dpField("Subtitle", e.subtitle);
-
-    // Source-specific
-    if (e.source === "tracking") {
-      html += this._dpField("Event Code", e.raw?.event_id || "–", true);
-      if (e.raw?.previous_event_id)
-        html += this._dpField("Previous Event", e.raw.previous_event_id, true);
-
-      // Mapping
-      const m = e.mapping;
-      if (m) {
-        const badgeCls = m.mapping_status === "exact" ? "exact" : m.mapping_status === "screen_fallback" ? "fallback" : "unknown";
-        const badgeLabel = m.mapping_status === "exact" ? "exact" : m.mapping_status === "screen_fallback" ? "screen" : "unknown";
-        html += `<div class="di-dp-field">
-          <div class="di-dp-field-lbl">Event Mapping <span class="di-map-badge ${badgeCls}">${badgeLabel}</span></div>
-          <div class="di-dp-field-val">${this._e(m.event_name || "–")}</div>
-        </div>`;
-        if (m.screen_code)
-          html += this._dpField("Screen Code", m.screen_code, true);
-        if (m.screen_name)
-          html += this._dpField("Screen Name", m.screen_name);
-      }
-
-    } else if (e.source === "access") {
-      html += this._dpField("Page", e.raw?.page || "–", true);
-      if (e.raw?.app)     html += this._dpField("App", e.raw.app);
-      if (e.raw?.traceID) html += this._dpField("TraceID", e.raw.traceID, true);
-      if (e.raw?.status_code) html += this._dpField("HTTP Status", String(e.raw.status_code));
-
-    } else {
-      html += this._dpField("Endpoint", e.raw?.endpoint || "–", true);
-      if (e.raw?.network_type) html += this._dpField("Network", e.raw.network_type);
-      if (e.raw?.error_message)
-        html += `<div class="di-dp-err">⚠ ${this._e(e.raw.error_message)}</div>`;
-    }
-
-    // Correlation
-    const corr = e.correlation;
-    if (corr && (corr.trace_id || corr.session_id || corr.device_id)) {
-      html += `<hr class="di-dp-divider">`;
-      if (corr.trace_id)   html += this._dpField("Trace ID",   corr.trace_id, true);
-      if (corr.session_id) html += this._dpField("Session ID", corr.session_id, true);
-      if (corr.device_id)  html += this._dpField("Device ID",  corr.device_id, true);
-    }
-
-    // Raw JSON
-    html += `<hr class="di-dp-divider">`;
-    html += `<div class="di-dp-field">
-      <div class="di-dp-field-lbl">Raw</div>
-      <div class="di-dp-json">${this._e(JSON.stringify(e.raw, null, 2))}</div>
-    </div>`;
-
-    // Session journey (tracking only)
-    if (e.source === "tracking") {
-      html += `<hr class="di-dp-divider">`;
-      html += this._buildJourneyHtml(e);
-    }
-
-    document.getElementById("di-dp-body").innerHTML = html;
-
-    // Wire journey card clicks
-    if (e.source === "tracking") {
-      document.querySelectorAll(".di-journey-card[data-id]").forEach(card => {
-        card.onclick = () => {
-          const eid = card.dataset.id;
-          const raw = this._events.find(ev => ev.id === eid);
-          if (raw) this._openDetail(raw);
-        };
-      });
-    }
-
-    document.getElementById("di-detail-panel").classList.add("open");
-    document.getElementById("di-scrim").classList.add("open");
-  },
-
-  _dpField(label, val, mono = false) {
-    const cls = mono ? " mono" : "";
-    return `<div class="di-dp-field">
-      <div class="di-dp-field-lbl">${this._e(label)}</div>
-      <div class="di-dp-field-val${cls}">${this._e(String(val ?? ""))}</div>
-    </div>`;
-  },
-
-  _buildJourneyHtml(activeEvent) {
-    const trackingEvts = this._events.filter(e => e.source === "tracking");
-    if (trackingEvts.length === 0) return "";
-
-    const chips = trackingEvts.map((e, pos) => {
-      const isActive   = e.id === activeEvent.id;
-      const eventCode  = e.raw?.event_id || "–";
-      const eventName  = e.mapping?.event_name || e.title || "";
-      const showName   = eventName && eventName !== eventCode;
-      const isErr      = e.severity === "error" || e.severity === "fatal";
-      const arrow      = pos < trackingEvts.length - 1 ? `<div class="di-journey-arrow">↓</div>` : "";
-      return `
-        <div class="di-journey-step">
-          <div class="di-journey-card${isActive ? " active" : ""}" data-id="${this._e(e.id)}">
-            <div class="di-journey-card-hd">
-              <span class="di-journey-card-id">${this._e(eventCode)}</span>
-              <span class="di-journey-card-ts">${this._e(e.ts_str || "")}</span>
-            </div>
-            ${showName  ? `<div class="di-journey-card-name">${this._e(eventName)}</div>` : ""}
-            ${isErr     ? `<div class="di-journey-card-err">⚠ ERROR</div>` : ""}
-          </div>
-          ${arrow}
-        </div>`;
-    }).join("");
-
-    return `
-      <div class="di-journey-title">📍 Session Journey (${trackingEvts.length} events)</div>
-      <div class="di-journey-wrap"><div class="di-journey">${chips}</div></div>`;
-  },
-
   // ── Insight ───────────────────────────────────────────────────────────────
 
   _renderInsight(c, data) {
@@ -767,18 +416,14 @@ export default {
     //   </div>`;
     // }
 
-    // Evidence (clickable)
+    // Evidence (read-only)
     if (ins.evidence && ins.evidence.length > 0) {
       const evCards = ins.evidence.map(ev => `
-        <div class="di-evidence-item" data-eid="${this._e(ev.event_id)}">
-          <div>
-            <div class="di-ev-id">${this._e(ev.event_id)}</div>
-            <div class="di-ev-ts">${this._e(ev.timestamp || "")}</div>
-          </div>
+        <div class="di-evidence-item">
           <div class="di-ev-reason">${this._e(ev.reason)}</div>
         </div>`).join("");
       html += `<div class="di-insight-section">
-        <h4>Evidence (${ins.evidence.length}) — click để xem trên timeline</h4>
+        <h4>Evidence (${ins.evidence.length})</h4>
         ${evCards}
       </div>`;
     }
@@ -815,47 +460,19 @@ export default {
     // }
 
     box.innerHTML = html;
-
-    // Wire evidence item clicks
-    box.querySelectorAll(".di-evidence-item[data-eid]").forEach(el => {
-      el.onclick = () => this._onEvidenceClick(c, el.dataset.eid);
-    });
-  },
-
-  _onEvidenceClick(c, eventId) {
-    const ev = this._events.find(e => e.id === eventId);
-    if (!ev) return;
-
-    // Switch to timeline tab
-    c.querySelectorAll(".di-tab").forEach(t => t.classList.toggle("active", t.dataset.pane === "timeline"));
-    c.querySelectorAll(".di-tab-pane").forEach(p => p.classList.toggle("active", p.id === "pane-timeline"));
-    if (this._visTimeline) {
-      setTimeout(() => {
-        this._visTimeline.redraw();
-        this._visTimeline.setSelection([eventId]);
-        try { this._visTimeline.focus(eventId, { animation: { duration: 400 } }); } catch(_) {}
-      }, 50);
-    }
-
-    this._openDetail(ev);
   },
 
   // ── Reset ─────────────────────────────────────────────────────────────────
 
   _reset(c) {
+    this._hideLoading(c);
     c.querySelector("#di-desc").value = "";
     const parsed = c.querySelector("#di-parsed");
     parsed.innerHTML = ""; parsed.style.display = "none";
     c.querySelector("#di-banners").innerHTML = "";
     c.querySelector("#di-result").style.display = "none";
     c.querySelector("#di-stats-ext").style.display = "none";
-    if (this._visTimeline) { this._visTimeline.destroy(); this._visTimeline = null; }
-    this._visItems = null;
-    this._events = []; this._parsed = null; this._insight = null; this._activeId = null;
-    c.querySelectorAll(".di-tab").forEach(t => t.classList.toggle("active", t.dataset.pane === "timeline"));
-    c.querySelectorAll(".di-tab-pane").forEach(p => p.classList.toggle("active", p.id === "pane-timeline"));
-    document.getElementById("di-detail-panel")?.classList.remove("open");
-    document.getElementById("di-scrim")?.classList.remove("open");
+    this._events = []; this._parsed = null; this._insight = null;
     c.querySelector("#di-desc").focus();
   },
 

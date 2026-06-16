@@ -19,6 +19,7 @@ export default {
 
   _steps: [],
   _lastResult: null,
+  _loadTimer: null,
 
   render(container) {
     this._steps = [];
@@ -87,7 +88,8 @@ export default {
           <button id="fa-insight-btn" class="btn-sm btn-outline"
                   style="margin-left:auto;display:none">↺ Regenerate</button>
         </div>
-        <div id="fa-insight-body" class="fa-md-body"></div>
+        <div id="fa-loading"></div>
+        <div id="fa-insight-body" class="fa-md-body" style="display:none"></div>
       </section>
     `;
 
@@ -402,10 +404,10 @@ export default {
 
     insightSection.style.display = "";
     regenBtn.style.display = "none";
-    status.textContent = "Generating AI insight…";
-    body.innerHTML = `<div class="fa-insight-loading">
-      <span class="fa-spinner"></span> Analysing funnel drop-offs with AI…
-    </div>`;
+    status.textContent = "";
+    body.style.display = "none";
+    body.innerHTML = "";
+    this._showLoading(container, ["🧠","📊","🔍","💡","📈","⚡"], "Đang phân tích funnel…", "AI đang tìm điểm drop-off và đề xuất cải thiện");
 
     // Scroll insight into view
     setTimeout(() => insightSection.scrollIntoView({ behavior: "smooth", block: "nearest" }), 100);
@@ -419,21 +421,56 @@ export default {
       const data = await resp.json();
 
       if (!resp.ok) {
+        this._hideLoading(container);
         status.textContent = `Error: ${data.detail || resp.statusText}`;
-        body.innerHTML = "";
         regenBtn.style.display = "";
         return;
       }
 
-      status.textContent = "";
+      this._hideLoading(container);
       regenBtn.style.display = "";
+      body.style.display = "";
       body.innerHTML = _mdToHtml(data.insight ?? "_No insight returned._");
 
     } catch (e) {
+      this._hideLoading(container);
       status.textContent = `Network error: ${e.message}`;
-      body.innerHTML = "";
       regenBtn.style.display = "";
     }
+  },
+
+  // ── Loading ────────────────────────────────────────────────────────────────
+
+  _showLoading(container, icons, title, subtitle) {
+    this._stopLoadingTimer();
+    const wrap = container.querySelector("#fa-loading");
+    if (!wrap) return;
+    let idx = 0;
+    wrap.innerHTML = `
+      <div class="fa-loading-card">
+        <div class="fa-loading-ring-wrap">
+          <div class="fa-loading-ring"></div>
+          <div class="fa-loading-icon">${icons[0]}</div>
+        </div>
+        <div class="fa-loading-title">${title}</div>
+        <div class="fa-loading-sub">${subtitle}</div>
+        <div class="fa-loading-dots"><span></span><span></span><span></span></div>
+      </div>`;
+    this._loadTimer = setInterval(() => {
+      idx = (idx + 1) % icons.length;
+      const el = wrap.querySelector(".fa-loading-icon");
+      if (el) el.textContent = icons[idx];
+    }, 700);
+  },
+
+  _stopLoadingTimer() {
+    if (this._loadTimer) { clearInterval(this._loadTimer); this._loadTimer = null; }
+  },
+
+  _hideLoading(container) {
+    this._stopLoadingTimer();
+    const wrap = container.querySelector("#fa-loading");
+    if (wrap) wrap.innerHTML = "";
   },
 
   // ── Styles ─────────────────────────────────────────────────────────────────
@@ -567,17 +604,26 @@ export default {
         margin-top: 1.6rem; letter-spacing: .03em;
       }
 
-      /* ── AI Insight — Markdown output ── */
-      .fa-insight-loading {
-        display: flex; align-items: center; gap: .6rem;
-        color: #888; font-size: .9rem; padding: .75rem 0;
-      }
-      .fa-spinner {
-        display: inline-block; width: 16px; height: 16px;
-        border: 2px solid #ddd; border-top-color: #4f8ef7;
-        border-radius: 50%; animation: fa-spin .7s linear infinite;
-      }
-      @keyframes fa-spin { to { transform: rotate(360deg); } }
+      /* ── AI Insight loading card ── */
+      @keyframes fa-spin  { to { transform: rotate(360deg); } }
+      @keyframes fa-pop   { 0%,100% { transform: scale(1); } 50% { transform: scale(1.25); } }
+      @keyframes fa-dot   { 0%,80%,100% { opacity:.2; transform:translateY(0); } 40% { opacity:1; transform:translateY(-4px); } }
+      .fa-loading-card { display:flex; flex-direction:column; align-items:center; justify-content:center;
+        padding:36px 20px; background:#fff; border:1px solid #e2e8f0; border-radius:12px;
+        margin-bottom:12px; box-shadow:0 1px 3px rgba(0,0,0,.06); gap:14px; }
+      .fa-loading-ring-wrap { position:relative; width:64px; height:64px; }
+      .fa-loading-ring { position:absolute; inset:0; border-radius:50%;
+        border:3px solid #e2e8f0; border-top-color:#6366f1;
+        animation:fa-spin 0.9s linear infinite; }
+      .fa-loading-icon { position:absolute; inset:0; display:flex; align-items:center;
+        justify-content:center; font-size:26px; animation:fa-pop 1.8s ease-in-out infinite; }
+      .fa-loading-title { font-size:14px; font-weight:700; color:#0f172a; }
+      .fa-loading-sub   { font-size:12px; color:#64748b; }
+      .fa-loading-dots  { display:flex; gap:5px; }
+      .fa-loading-dots span { width:6px; height:6px; border-radius:50%; background:#6366f1;
+        animation:fa-dot 1.2s ease-in-out infinite; }
+      .fa-loading-dots span:nth-child(2) { animation-delay:.2s; }
+      .fa-loading-dots span:nth-child(3) { animation-delay:.4s; }
 
       .fa-md-body {
         background: #f8f9fb;
