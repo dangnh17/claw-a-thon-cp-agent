@@ -631,13 +631,33 @@ function _mdToHtml(md) {
     if (listTag) { out.push(`</${listTag}>`); listTag = null; }
   };
 
-  const inline = (text) => text
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/\*\*(.+?)\*\*/g,  "<strong>$1</strong>")
-    .replace(/__(.+?)__/g,       "<strong>$1</strong>")
-    .replace(/\*(.+?)\*/g,       "<em>$1</em>")
-    .replace(/_(.+?)_/g,         "<em>$1</em>")
-    .replace(/`(.+?)`/g,         "<code>$1</code>");
+  // LaTeX math → Unicode (handles $...$ inline math blocks)
+  const LATEX = {
+    "\\rightarrow": "→", "\\leftarrow": "←", "\\to": "→",
+    "\\Rightarrow": "⇒", "\\Leftarrow": "⇐",
+    "\\times": "×", "\\div": "÷", "\\approx": "≈",
+    "\\geq": "≥", "\\leq": "≤", "\\neq": "≠",
+    "\\pm": "±", "\\infty": "∞", "\\cdot": "·",
+    "\\%": "%", "\\alpha": "α", "\\beta": "β", "\\delta": "δ",
+  };
+  const deLatex = (t) =>
+    // Replace $...$ blocks: substitute known commands, strip $ delimiters
+    t.replace(/\$([^$]+?)\$/g, (_, inner) => {
+      let out = inner;
+      for (const [cmd, sym] of Object.entries(LATEX)) out = out.replaceAll(cmd, sym);
+      return out.trim();
+    });
+
+  const inline = (text) => {
+    let t = deLatex(text);
+    return t
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/\*\*(.+?)\*\*/g,  "<strong>$1</strong>")
+      .replace(/__(.+?)__/g,       "<strong>$1</strong>")
+      .replace(/\*(.+?)\*/g,       "<em>$1</em>")
+      .replace(/_(.+?)_/g,         "<em>$1</em>")
+      .replace(/`(.+?)`/g,         "<code>$1</code>");
+  };
 
   for (const raw of lines) {
     const line = raw;
