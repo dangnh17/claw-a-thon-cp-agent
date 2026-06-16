@@ -1,185 +1,116 @@
-# Agent Template — Dynamic Module Architecture
+# CP Agent
+
+🇻🇳 [Xem bản Tiếng Việt](README.vi.md)
+
+> An AI-powered tool that automatically analyzes Event Logs, reconstructs User Journeys, pinpoints exactly where the funnel breaks and distinguishes UI-side (device) failures from Network/API (system) failures.
+
+---
+
+## Demo
+
+[![Watch the demo](https://img.shields.io/badge/▶%20Watch%20Demo-blue?style=for-the-badge)](https://vngms-my.sharepoint.com/:v:/g/personal/duyhv3_vng_com_vn/IQDNBH7_WhR6TYVlG7uP4veMAZXS6WLoglyFmU0ZKTPMyO8)
+
+## Problem
+
+Event data is large, unstructured, and spread across multiple sources — making it hard for any team to extract actionable insights without significant manual effort:
+
+1. **No clear picture of what happened.** Raw event logs are unordered and noisy; reconstructing a user's journey or pinpointing a failure requires filtering hundreds of events by hand.
+2. **Failure causes are hard to distinguish.** The same symptom can stem from a client-side crash or a server-side timeout — different root causes that require different fixes, but look identical on the surface.
+3. **No funnel visibility.** Teams lack a quick way to see where users drop off across funnel steps or compare conversion across time periods and segments.
+4. **Insights stay locked in raw data.** Behavioral patterns and common failure paths exist in the data but are never surfaced — because extracting them manually doesn't scale.
+5. **Non-technical staff are blocked.** CS/Ops cannot self-serve and must wait for Dev, slowing customer response and inflating MTTR.
+
+---
+
+## Users
+
+| Who | How they use it |
+|-----|----------------|
+| **CS / Ops** | Paste error description + JSON → get instant diagnosis and the exact broken step to respond to customers. |
+| **Dev / QC** | Instantly scope failures (UI or Network/API) without reading the full log manually. |
+| **Product Owner** | View Success Rate and failure touchpoints per feature to make timely optimization decisions. |
+
+---
+
+## Solution
+
+The agent covers three capabilities:
+
+**Debug Investigator** — Paste a Jira ticket; the LLM extracts data, queries event sources, and classifies the failure. Output includes a timestamped timeline, evidence quotes, and recommended actions.
+
+**Funnel Analysis** — Define funnel steps by event ID or prefix; the agent calculates user counts, drop-off rates, and conversion at each step, then generates an LLM-written analysis of the weakest point.
+
+**Journey Insight** — Runs a 5-step pipeline over raw tracking data to mine natural event-chain patterns, surface behavioral insights across user segments and time windows, and produce a Markdown report with a visual summary.
 
 ---
 
 ## Architecture
 
 ```
-Browser
-  └── HTTP (port 8080)
-        └── FastAPI (agent/app.py)
-              ├── /api/data/*        ← Shared data management
-              ├── /api/feature-a/*   ← Member 1
-              ├── /api/feature-b/*   ← Member 2
-              └── /api/feature-c/*   ← Member 3
+Browser (frontend/)
+  │  ← Paste Jira ticket, define funnel steps, select time window
+  │  ← View timeline, failure classification, funnel drop-off, journey report
+  │
+  └── HTTP (port 8080) ──→ FastAPI (agent/app.py)
+                                ├── /api/debug/*            → Debug Investigator
+                                ├── /api/funnel-analysis/*  → Funnel Analysis
+                                └── /api/journey-insight/*  → Journey Insight
 
-Data: output/**/*.parquet  (PyArrow + Pandas)
-LLM:  agent/llm_client.py  (OpenAI-compatible MaaS)
+Data store: output/**/*.parquet   (PyArrow)
+LLM:        agent/llm_client.py   (GreenNode MaaS — OpenAI-compatible)
 ```
 
 ---
 
-## File Structure
+## How to Run
 
-```
-├── CLAUDE.md                   # Instructions for AI agents
-├── run_agent.py                # Entry point
-├── .env.example
-├── requirements.txt
-│
-├── agent/
-│   ├── app.py                  # ⛔ DO NOT EDIT — auto-mounts routers
-│   ├── llm_client.py           # Shared LLM client
-│   ├── modules/
-│   │   ├── __init__.py         # ✏️ Add 1 line per feature
-│   │   ├── feature_a.py        # Template — copy to add feature
-│   │   └── data_ingest.py      # Internal only — not mounted as public API
-│   └── data/
-│       └── store.py            # ⛔ Parquet helpers
-│
-├── scripts/
-│   └── insert_data.py          # Manual data insertion (CLI)
-│
-├── frontend/
-│   ├── index.html              # ⛔ DO NOT EDIT
-│   ├── loader.js               # ⛔ DO NOT EDIT
-│   ├── style.css               # Shared styles
-│   └── modules/
-│       ├── index.js            # ✏️ Add 1 line per feature
-│       ├── feature-a.js        # Template — copy to add feature
-│       └── data-ingest.js      # (not registered — internal only)
-│
-└── output/                     # Parquet files (gitignored)
-```
+### Prerequisites
 
----
+- Python 3.10+
+- GreenNode MaaS API key (`AI_PLATFORM_API_KEY`)
 
-## Adding a New Feature (per-member workflow)
-
-### Backend
+### 1. Install
 
 ```bash
-cp agent/modules/feature_a.py agent/modules/feature_b.py
-```
-
-1. Change `prefix="/api/feature-b"` and `DATA_PATH`
-2. Register in `agent/modules/__init__.py`:
-
-```python
-from agent.modules import feature_b   # +1 line
-# inside get_all_routers():
-feature_b.router,                     # +1 line
-```
-
-### Frontend
-
-```bash
-cp frontend/modules/feature-a.js frontend/modules/feature-b.js
-```
-
-1. Change `id`, `label`, `icon`, `API_PREFIX`
-2. Register in `frontend/modules/index.js`:
-
-```js
-import featureB from "./feature-b.js";   // +1 line
-featureB,                                // +1 line in the array
-```
-
-The new tab appears automatically. **Do not touch `index.html`, `loader.js`, or `app.py`.**
-
----
-
-## Conflict Risk
-
-| File | Who edits | Risk |
-|------|-----------|------|
-| `agent/modules/feature_x.py` | 1 person | None |
-| `frontend/modules/feature-x.js` | 1 person | None |
-| `agent/modules/__init__.py` | Whole team | **Low** — each adds 1 line |
-| `frontend/modules/index.js` | Whole team | **Low** — each adds 1 line |
-| `agent/app.py`, `loader.js`, `index.html` | Nobody | None |
-
-If a conflict occurs: keep all existing lines and add yours.
-
----
-
-## Data Layer (Parquet)
-
-Always use **absolute paths** (relative paths break when the server is started from a different CWD):
-
-```python
-import os
-from agent.data.store import append_record, read_records
-
-_BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-DATA_PATH = os.path.join(_BASE_DIR, "output", "feature_a", "results.parquet")
-
-append_record(DATA_PATH, {"score": 4.2, "label": "good"})
-rows = read_records(DATA_PATH)
-```
-
-**Manual insertion (CLI script):**
-
-```bash
-# Append records from a JSON file
-python scripts/insert_data.py --dataset feature_a/records --file /path/to/data.json
-
-# Append inline JSON
-python scripts/insert_data.py --dataset feature_a/records \
-    --records '[{"score": 4.2, "label": "good"}]'
-
-# Overwrite (replaces all existing data)
-python scripts/insert_data.py --dataset feature_a/records \
-    --mode overwrite --file /path/to/data.json
-```
-
-> `/api/data/*` endpoints are **not exposed publicly**. Data access is internal via `agent.data.store`.
-
----
-
-## Docker
-
-### Docker Compose
-
-```bash
-cp .env.example .env   # fill in API key
-docker compose up --build
-```
-
-Open `http://localhost:8080`. Parquet data is persisted to `./output/` across restarts.
-
-```bash
-docker compose up --build -d   # run in background
-docker compose logs -f          # follow logs
-docker compose down             # stop
-```
-
----
-
-## Run (local)
-
-```bash
-cp .env.example .env   # fill in API key
+git clone <repo-url>
+cd claw-a-thon-cp-agent
 pip install -r requirements.txt
+```
+
+### 2. Configure environment
+
+```bash
+cp .env.example .env
+```
+
+Fill in the API key in `.env`:
+
+```env
+AI_PLATFORM_API_KEY=your-api-key-here
+LLM_MODEL=google/gemma-4-31b-it
+LLM_BASE_URL=https://maas-llm-aiplatform-hcm.api.vngcloud.vn/v1
+```
+
+### 3. Start
+
+```bash
 python run_agent.py
 ```
 
-Open `http://localhost:8080` — tabs auto-appear for each registered feature.
+Open `http://localhost:8080` — feature tabs appear automatically.
 
----
+### Docker
 
-## Deploy to GreenNode AgentBase (agent instructions)
-
-> **For AI agents**: Use the `/agentbase-deploy` skill for this workflow. Read `.claude/skills/agentbase-deploy/SKILL.md` before executing any step.
-
-The production runtime is already provisioned:
-
-```
-Runtime ID: runtime-1340b598-f28c-4ec9-84b6-8d958772d544
-Console:    https://aiplatform.console.vngcloud.vn/agent-runtime?tab=runtime
+```bash
+cp .env.example .env
+docker compose up --build
 ```
 
-Each redeploy is an **update** (not create). Every step must be executed fresh — no Docker layer cache.
+```bash
+docker compose up --build -d   # background
+docker compose logs -f          # follow logs
+docker compose down             # stop
+```
 
 ---
 
@@ -188,7 +119,54 @@ Each redeploy is an **update** (not create). Every step must be executed fresh �
 ```python
 from agent.llm_client import call_llm
 
-text = call_llm("Your prompt here", max_tokens=1000)
+text = call_llm("Analyze the following Event Log...", max_tokens=2000)
 ```
 
 Configured via `.env`: `LLM_MODEL`, `LLM_BASE_URL`, `AI_PLATFORM_API_KEY`.
+
+---
+
+## File Structure
+
+```
+├── Dockerfile
+├── docker-compose.yml
+├── run_agent.py
+├── .env.example
+├── requirements.txt
+│
+├── agent/
+│   ├── app.py
+│   ├── llm_client.py
+│   ├── modules/
+│   │   ├── __init__.py
+│   │   ├── data_ingest.py
+│   │   ├── debug_investigator.py
+│   │   ├── feature_a.py
+│   │   ├── funnel_analysis.py
+│   │   └── journey_insight.py
+│   ├── pipeline/
+│   │   └── journey/
+│   │       ├── __init__.py
+│   │       ├── step1_event_meaning.py
+│   │       ├── step2b_natural_chain_mining.py
+│   │       ├── step3_insight_candidates.py
+│   │       ├── step4_report.py
+│   │       └── step5_visual_summary.py
+│   └── data/
+│       └── store.py
+│
+├── frontend/
+│   ├── index.html
+│   ├── loader.js
+│   ├── style.css
+│   └── modules/
+│       ├── index.js
+│       ├── data-ingest.js
+│       ├── debug-investigator.js
+│       ├── feature-a.js
+│       ├── funnel-analysis.js
+│       └── journey-insight.js
+│
+└── output/
+```
