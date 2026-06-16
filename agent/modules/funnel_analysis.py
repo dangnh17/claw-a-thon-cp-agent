@@ -353,17 +353,17 @@ async def insight_custom(req: InsightRequest):
         line += f"\n   Events: {id_names}"
         step_lines.append(line)
 
-    prompt = f"""You are a senior product analyst reviewing a mobile app conversion funnel.
+    prompt = f"""Bạn là một senior product analyst đang phân tích phễu chuyển đổi của ứng dụng di động ZaloPay.
 
-Funnel results (unique users, sequential):
+Kết quả phễu (người dùng duy nhất, tuần tự):
 {chr(10).join(step_lines)}
 
-Overall conversion: {steps[-1]['pct_formatted'] if steps else '—'}
+Tỷ lệ chuyển đổi tổng thể: {steps[-1]['pct_formatted'] if steps else '—'}
 
-Provide a concise analysis (max 300 words):
-1. Biggest relative drop-off — step, magnitude, 2–3 probable root causes.
-2. One step that is healthier than expected — brief explanation.
-3. Two concrete, actionable recommendations to improve the weakest step."""
+Hãy cung cấp phân tích ngắn gọn (tối đa 300 từ) bằng tiếng Việt:
+1. Điểm rớt lớn nhất — bước nào, mức độ, 2–3 nguyên nhân có thể.
+2. Một bước đang hoạt động tốt hơn kỳ vọng — giải thích ngắn gọn.
+3. Hai đề xuất cụ thể, khả thi để cải thiện bước yếu nhất."""
 
     try:
         llm_text = call_llm(prompt, max_tokens=700)
