@@ -173,9 +173,14 @@ export default {
 
   // ── Bindings ──────────────────────────────────────────────────────────────
 
+  _DEMO_TICKET: `Mô tả lỗi: Truy cập app bị trắng màn hình
+Thời gian xảy ra: 16:25 13/06/2026
+UserID: 240919000001944`,
+
   _bind(c) {
     c.querySelector("#di-run").onclick   = () => this._run(c);
     c.querySelector("#di-reset").onclick = () => this._reset(c);
+    c.querySelector("#di-desc").value    = this._DEMO_TICKET;
   },
 
   // ── Run ───────────────────────────────────────────────────────────────────
